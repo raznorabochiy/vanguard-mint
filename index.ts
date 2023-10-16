@@ -88,7 +88,7 @@ for (let i = 0; i < keys.length; i++) {
 
   console.log(`${count}/${length} address: ${address}`);
 
-  for (let tokenIndex = 30; tokenIndex <= 42; tokenIndex++) {
+  for (let tokenIndex = 1; tokenIndex <= 42; tokenIndex++) {
     await mint(key, tokenIndex);
     const delayTimeout = random(DELAY_FROM_SEC, DELAY_TO_SEC);
     await delayProgress(delayTimeout);
