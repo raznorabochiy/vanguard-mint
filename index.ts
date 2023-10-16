@@ -1,7 +1,7 @@
 import cli from "cli";
 import { JsonRpcProvider, Wallet } from "ethers";
 import random from "lodash/random";
-import fetch from "node-fetch";
+import fetch, {AbortError} from "node-fetch";
 import {
   DELAY_FROM_SEC,
   DELAY_TO_SEC,
@@ -18,6 +18,11 @@ async function mint(key: string, tokenIndex: number) {
   const signature = await wallet.signMessage("Xai Testnet Drop");
 
   cli.spinner(`Start mint nft number ${tokenIndex}`);
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => {
+    controller.abort();
+  }, 15_000);
 
   try {
     const response = await fetch(
@@ -40,10 +45,13 @@ async function mint(key: string, tokenIndex: number) {
         "referrerPolicy": "strict-origin-when-cross-origin",
         "body": `{"signature":"${signature}","tokenIndex":${tokenIndex}}`,
         "method": "POST",
+        signal: controller.signal
       },
     );
 
     const results = await response.json();
+
+    // console.log(results);
 
     if (results["transactionHash"]) {
       const transactionHash = results["transactionHash"];
@@ -60,7 +68,13 @@ async function mint(key: string, tokenIndex: number) {
       return mint(key, tokenIndex);
     }
   } catch (_) {
-    cli.spinner("Mint error, retry", true);
+    if (_ instanceof AbortError) {
+      cli.spinner("Timeout error, retry", true);
+    } else {
+      cli.spinner("Mint error, retry", true);
+    }
+    clearTimeout(timeout);
+
     return mint(key, tokenIndex);
   }
 }
@@ -74,7 +88,7 @@ for (let i = 0; i < keys.length; i++) {
 
   console.log(`${count}/${length} address: ${address}`);
 
-  for (let tokenIndex = 1; tokenIndex <= 42; tokenIndex++) {
+  for (let tokenIndex = 30; tokenIndex <= 42; tokenIndex++) {
     await mint(key, tokenIndex);
     const delayTimeout = random(DELAY_FROM_SEC, DELAY_TO_SEC);
     await delayProgress(delayTimeout);
