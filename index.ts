@@ -13,11 +13,11 @@ import { delayProgress, loadKeys } from "./utils";
 const provider = new JsonRpcProvider(RPC_URL);
 const keys = await loadKeys(KEYS_FILENAME);
 
-async function mint(key: string) {
+async function mint(key: string, tokenIndex: number) {
   const wallet = new Wallet(key, provider);
   const signature = await wallet.signMessage("Xai Testnet Drop");
 
-  cli.spinner("Mint start");
+  cli.spinner(`Start mint nft number ${tokenIndex}`);
 
   try {
     const response = await fetch(
@@ -38,7 +38,7 @@ async function mint(key: string) {
         },
         "referrer": "https://xai.games/",
         "referrerPolicy": "strict-origin-when-cross-origin",
-        "body": `{"signature":"${signature}"}`,
+        "body": `{"signature":"${signature}","tokenIndex":${tokenIndex}}`,
         "method": "POST",
       },
     );
@@ -52,16 +52,16 @@ async function mint(key: string) {
         true,
       );
     } else if (
-      results["error"] === "This address has already minted today's nft."
+      results["error"] === "This address has already minted the requested nft today."
     ) {
       cli.spinner(results["error"], true);
     } else if (results["error"].includes("Failed to mint NFT")) {
       cli.spinner("Mint error, retry", true);
-      return mint(key);
+      return mint(key, tokenIndex);
     }
   } catch (_) {
     cli.spinner("Mint error, retry", true);
-    return mint(key);
+    return mint(key, tokenIndex);
   }
 }
 
@@ -74,7 +74,11 @@ for (let i = 0; i < keys.length; i++) {
 
   console.log(`${count}/${length} address: ${address}`);
 
-  await mint(key);
+  for (let tokenIndex = 1; tokenIndex <= 42; tokenIndex++) {
+    await mint(key, tokenIndex);
+    const delayTimeout = random(DELAY_FROM_SEC, DELAY_TO_SEC);
+    await delayProgress(delayTimeout);
+  }
 
   if (!last) {
     const delayTimeout = random(DELAY_FROM_SEC, DELAY_TO_SEC);
